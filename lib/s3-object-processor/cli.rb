@@ -10,6 +10,9 @@ module S3ObjectProcessor
 			@reports = {}
 			instance_eval &config
 
+			cli_setup = @cli_setup
+			cli_process_setup = @cli_process_setup
+
 			settings = ::CLI.new do
 				description 'Set header of S3 object'
 
@@ -74,9 +77,9 @@ module S3ObjectProcessor
 					description: 'stop after processing this amout of keys',
 					cast: Integer
 
-				instance_eval &@cli_setup if @cli_setup
+				instance_eval &cli_setup if cli_setup
 			end.parse! do |settings|
-				instance_eval &@cli_process_setup if @cli_process_setup
+				instance_eval &cli_process_setup if cli_process_setup
 			end
 
 			log = Logger.new(STDERR)

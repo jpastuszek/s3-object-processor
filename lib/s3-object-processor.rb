@@ -229,7 +229,7 @@ class BucketProcessor
 					key, error = *value
 					@log.error "Key processing failed: #{key}: #{error.class.name}, #{error.message}"
 					total_failed_keys += 1
-				when :updated_key
+				when :handled_key
 					total_handled_keys += 1
 				when :skipped_key
 					total_skipped_keys += 1
