@@ -172,6 +172,8 @@ end
 
 class BucketProcessor
 	def initialize(key_id, key_secret, bucket, options = {}, &callback)
+		protocol = options[:no_https] ? 'http' : 'https'
+		port = options[:no_https] ? 80 : 443
 		@log = options[:log] || Logger.new(STDERR)
 		workers = options[:workers] || 10
 		lister_fetch_size = options[:lister_fetch_size] || 200
@@ -182,7 +184,7 @@ class BucketProcessor
 		reporter_average_contribution = options[:reporter_average_contribution] || 0.10
 		custom_reports = options[:reports] || []
 
-		s3 = RightAws::S3.new(key_id, key_secret, multi_thread: true, logger: @log)
+		s3 = RightAws::S3.new(key_id, key_secret, multi_thread: true, logger: @log, protocol: protocol, port: port)
 		bucket = s3.bucket(bucket)
 
 		@key_queue = SizedQueue.new(lister_backlog)

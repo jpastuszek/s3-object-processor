@@ -28,6 +28,8 @@ module S3ObjectProcessor
 					default_label: 'AWS_SECRET_ACCESS_KEY environment variable',
 					default: ENV['AWS_SECRET_ACCESS_KEY'],
 					required: true
+				switch :no_https,
+					description: 'use plain HTTP S3 connections'
 
 				option :bucket,
 					short: :b,
@@ -88,6 +90,7 @@ module S3ObjectProcessor
 			log.debug(settings.inspect)
 
 			BucketProcessor.new(settings.key_id, settings.key_secret, settings.bucket,
+				no_https: settings.no_https,
 				log: log,
 				workers: settings.workers,
 				max_keys: settings.max_keys,
