@@ -17,8 +17,8 @@ Jeweler::Tasks.new do |gem|
   gem.name = "s3-object-processor"
   gem.homepage = "http://github.com/jpastuszek/s3-object-processor"
   gem.license = "MIT"
-  gem.summary = %Q{TODO: one-line summary of your gem}
-  gem.description = %Q{TODO: longer description of your gem}
+  gem.summary = "Migrate images to new httpimagestore flexible API"
+  gem.description = "Migrates images form httpimagestore v0 S3 bucket to new ISS flexible API"
   gem.email = "jpastuszek@gmail.com"
   gem.authors = ["Jakub Pastuszek"]
   # dependencies defined in Gemfile

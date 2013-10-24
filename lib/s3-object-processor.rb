@@ -1,7 +1,7 @@
 require 'thread'
 Thread.abort_on_exception = true
 
-class Runable
+class Runnable
 	def on_finish(&callback)
 		(@on_finish ||= []) << callback
 		self
@@ -24,7 +24,7 @@ class Runable
 	end
 end
 
-class Lister < Runable
+class Lister < Runnable
 	def initialize(bucket, key_queue, fetch_size)
 		@bucket = bucket
 		@key_queue = key_queue
@@ -35,7 +35,7 @@ class Lister < Runable
 		@on_keys_chunk = callback
 		self
 	end
-	
+
 	def run(prefix = nil)
 		super() do
 			marker = ''
@@ -52,7 +52,7 @@ class Lister < Runable
 	end
 end
 
-class Worker < Runable
+class Worker < Runnable
 	def initialize(no, key_queue, &process_key)
 		@no = no
 		@key_queue = key_queue
@@ -77,7 +77,52 @@ class Worker < Runable
 	end
 end
 
-class Reporter < Runable
+class Reporter < Runnable
+	class Report
+		class DSL
+			attr_reader :update_callback, :description, :value_pattern, :value_processor
+
+			def initialize(&setup)
+				instance_eval &setup
+			end
+
+			def update(&callback)
+				@update_callback = callback
+			end
+
+			def report(description, value_pattern, &value_processor)
+				@description = description
+				@value_pattern = value_pattern
+				@value_processor = value_processor
+			end
+		end
+
+		def initialize(init_value, &setup)
+			@dsl = DSL.new(&setup)
+			@value = init_value
+		end
+
+		def update(value)
+			@value = @dsl.update_callback.call(@value, value)
+		end
+
+		def value
+			@dsl.value_pattern % [@dsl.value_processor.call(@value)]
+		end
+
+		def description
+			@dsl.description
+		end
+
+		def to_s
+			"#{description}: #{value.rjust(6)}"
+		end
+
+		def final
+			"#{description}: ".ljust(40) + value
+		end
+	end
+
 	def initialize(queue_size, &callback)
 		@report_queue = SizedQueue.new(queue_size)
 		@processor = callback
@@ -120,6 +165,7 @@ class BucketProcessor
 	 	reporter_backlog = options[:reporter_backlog] || 1000
 		reporter_summary_interval = options[:reporter_summary_interval] || 100
 		reporter_average_contribution = options[:reporter_average_contribution] || 0.10
+		custom_reports = options[:reports] || []
 
 		s3 = RightAws::S3.new(key_id, key_secret, multi_thread: true, logger: @log)
 		bucket = s3.bucket(bucket)
@@ -154,16 +200,21 @@ class BucketProcessor
 						last_time = Time.now.to_f
 						last_total = total_processed_keys
 
-						@log.info "-- processed %6d: failed: %6d (%6.2f %%) updated: %6d skipped: %6d (%6.2f %%) [backlog: %4d] @ %.1f op/s" % [
+						log_line = "-- processed %6d: failed: %6d (%6.2f %%) updated: %6d skipped: %6d (%6.2f %%)" % [
 							total_processed_keys,
 							total_failed_keys,
 							total_failed_keys.to_f / total_processed_keys * 100,
 							total_updated_keys,
 							total_skipped_keys,
-							total_skipped_keys.to_f / total_processed_keys * 100,
+							total_skipped_keys.to_f / total_processed_keys * 100
+						]
+						log_line << custom_reports.each_value.map{|v| ' ' + v.to_s}.join
+						log_line << " [backlog: %4d] @ %.1f op/s" % [
 							@key_queue.size,
 							processed_avg
 						]
+
+						@log.info log_line
 					end
 				when :succeeded_key
 					total_succeeded_keys += 1
@@ -177,18 +228,24 @@ class BucketProcessor
 					total_skipped_keys += 1
 				when :noop_key
 					total_nooped_keys += 1
+				else
+					@log.debug "custom report event: #{key}: #{value}"
+					custom_reports[key].update(value)
 				end
 				#@log.debug("Report: #{key}: #{value}")
 			end
 
 			reports.on_finish do
-				@log.info("Total listed keys:    #{total_listed_keys}")
-				@log.info("Total processed keys: #{total_processed_keys}")
-				@log.info("Total succeeded keys: #{total_succeeded_keys}")
-				@log.info("Total failed keys:    #{total_failed_keys}")
-				@log.info("Total updated keys:   #{total_updated_keys}")
-				@log.info("Total skipped keys:   #{total_skipped_keys}")
-				@log.info("Total nooped keys:    #{total_nooped_keys}")
+				@log.info("total listed keys:                      #{total_listed_keys}")
+				@log.info("total processed keys:                   #{total_processed_keys}")
+				@log.info("total succeeded keys:                   #{total_succeeded_keys}")
+				@log.info("total failed keys:                      #{total_failed_keys}")
+				@log.info("total updated keys:                     #{total_updated_keys}")
+				@log.info("total skipped keys:                     #{total_skipped_keys}")
+				@log.info("total nooped keys:                      #{total_nooped_keys}")
+				custom_reports.each_value do |report|
+					@log.info report.final
+				end
 			end
 		end
 
@@ -205,7 +262,7 @@ class BucketProcessor
 		end
 
 		# create workers
-		@log.info "Lounching #{workers} workers"
+		@log.info "Launching #{workers} workers"
 		@workers = (1..workers).to_a.map do |worker_no|
 			Worker.new(worker_no, @key_queue) do |key|
 				@log.debug "Worker[#{worker_no}]: Processing key #{key}"
@@ -237,8 +294,7 @@ class BucketProcessor
 			@reporter.join
 		rescue Interrupt
 			# flush thread waiting on queues
-			@key_queue.max = 999999 
+			@key_queue.max = 999999
 		end
 	end
 end
-
