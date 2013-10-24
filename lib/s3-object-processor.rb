@@ -89,6 +89,8 @@ class Reporter < Runnable
 			attr_reader :update_callback, :description, :value_pattern, :value_processor
 
 			def initialize(&setup)
+				@update_callback = ->(t,v){t + v}
+				@value_processor = ->(v){v}
 				instance_eval &setup
 			end
 
@@ -99,7 +101,7 @@ class Reporter < Runnable
 			def report(description, value_pattern, &value_processor)
 				@description = description
 				@value_pattern = value_pattern
-				@value_processor = value_processor
+				@value_processor = value_processor if value_processor
 			end
 		end
 
@@ -154,6 +156,12 @@ class Reporter < Runnable
 
 	def report(key, value)
 		@report_queue << [key, value]
+	end
+
+	def time(key)
+		time = Time.now.to_f
+		yield
+		report key, Time.now.to_f - time
 	end
 
 	def join
