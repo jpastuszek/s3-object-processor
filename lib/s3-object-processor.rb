@@ -177,7 +177,7 @@ class BucketProcessor
 			total_processed_keys = 0
 			total_succeeded_keys = 0
 			total_failed_keys = 0
-			total_updated_keys = 0
+			total_handled_keys = 0
 			total_skipped_keys = 0
 			total_nooped_keys = 0
 
@@ -200,11 +200,11 @@ class BucketProcessor
 						last_time = Time.now.to_f
 						last_total = total_processed_keys
 
-						log_line = "-- processed %6d: failed: %6d (%6.2f %%) updated: %6d skipped: %6d (%6.2f %%)" % [
+						log_line = "-- processed %6d: failed: %6d (%6.2f %%) handled: %6d skipped: %6d (%6.2f %%)" % [
 							total_processed_keys,
 							total_failed_keys,
 							total_failed_keys.to_f / total_processed_keys * 100,
-							total_updated_keys,
+							total_handled_keys,
 							total_skipped_keys,
 							total_skipped_keys.to_f / total_processed_keys * 100
 						]
@@ -223,7 +223,7 @@ class BucketProcessor
 					@log.error "Key processing failed: #{key}: #{error.class.name}, #{error.message}"
 					total_failed_keys += 1
 				when :updated_key
-					total_updated_keys += 1
+					total_handled_keys += 1
 				when :skipped_key
 					total_skipped_keys += 1
 				when :noop_key
@@ -240,7 +240,7 @@ class BucketProcessor
 				@log.info("total processed keys:                   #{total_processed_keys}")
 				@log.info("total succeeded keys:                   #{total_succeeded_keys}")
 				@log.info("total failed keys:                      #{total_failed_keys}")
-				@log.info("total updated keys:                     #{total_updated_keys}")
+				@log.info("total handled keys:                     #{total_handled_keys}")
 				@log.info("total skipped keys:                     #{total_skipped_keys}")
 				@log.info("total nooped keys:                      #{total_nooped_keys}")
 				custom_reports.each_value do |report|
