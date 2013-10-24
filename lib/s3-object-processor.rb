@@ -25,10 +25,11 @@ class Runnable
 end
 
 class Lister < Runnable
-	def initialize(bucket, key_queue, fetch_size)
+	def initialize(bucket, key_queue, fetch_size, max_keys = nil)
 		@bucket = bucket
 		@key_queue = key_queue
 		@fetch_size = fetch_size
+		@max_keys = max_keys
 	end
 
 	def on_keys_chunk(&callback)
@@ -38,15 +39,20 @@ class Lister < Runnable
 
 	def run(prefix = nil)
 		super() do
-			marker = ''
-			loop do
-				keys_chunk = @bucket.keys(prefix: prefix, 'max-keys' => @fetch_size, marker: marker)
-				break if keys_chunk.empty?
-				@on_keys_chunk.call(keys_chunk) if @on_keys_chunk
-				keys_chunk.each do |key|
-					@key_queue << key
+			catch :done do
+				marker = ''
+				total_keys = 0
+				loop do
+					keys_chunk = @bucket.keys(prefix: prefix, 'max-keys' => @fetch_size, marker: marker)
+					break if keys_chunk.empty?
+					@on_keys_chunk.call(keys_chunk) if @on_keys_chunk
+					keys_chunk.each do |key|
+						throw :done if @max_keys and total_keys >= @max_keys
+						@key_queue << key
+						total_keys += 1
+					end
+					marker = keys_chunk.last.name
 				end
-				marker = keys_chunk.last.name
 			end
 		end
 	end
@@ -162,6 +168,7 @@ class BucketProcessor
 		workers = options[:workers] || 10
 		lister_fetch_size = options[:lister_fetch_size] || 200
 		lister_backlog = options[:lister_backlog] || 1000
+		max_keys = options[:max_keys]
 	 	reporter_backlog = options[:reporter_backlog] || 1000
 		reporter_summary_interval = options[:reporter_summary_interval] || 100
 		reporter_average_contribution = options[:reporter_average_contribution] || 0.10
@@ -229,7 +236,7 @@ class BucketProcessor
 				when :noop_key
 					total_nooped_keys += 1
 				else
-					@log.debug "custom report event: #{key}: #{value}"
+					#@log.debug "custom report event: #{key}: #{value}"
 					custom_reports[key].update(value)
 				end
 				#@log.debug("Report: #{key}: #{value}")
@@ -250,7 +257,7 @@ class BucketProcessor
 		end
 
 		# create lister
-		@lister = Lister.new(bucket, @key_queue, lister_fetch_size)
+		@lister = Lister.new(bucket, @key_queue, lister_fetch_size, max_keys)
 		.on_keys_chunk do |keys_chunk|
 			@log.debug "Got #{keys_chunk.length} new keys"
 			@reporter.report(:new_keys_count, keys_chunk.length)

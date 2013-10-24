@@ -70,6 +70,10 @@ module S3ObjectProcessor
 					short: :d,
 					description: 'log at DEBUG level'
 
+				option :max_keys,
+					description: 'stop after processing this amout of keys',
+					cast: Integer
+
 				instance_eval &@cli_setup if @cli_setup
 			end.parse! do |settings|
 				instance_eval &@cli_process_setup if @cli_process_setup
@@ -83,6 +87,7 @@ module S3ObjectProcessor
 			BucketProcessor.new(settings.key_id, settings.key_secret, settings.bucket,
 				log: log,
 				workers: settings.workers,
+				max_keys: settings.max_keys,
 				lister_fetch_size: settings.lister_fetch_size,
 				lister_backlog: settings.lister_backlog,
 				reporter_backlog: settings.reporter_backlog,
