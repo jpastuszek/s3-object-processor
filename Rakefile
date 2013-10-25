@@ -22,6 +22,10 @@ Jeweler::Tasks.new do |gem|
   gem.email = "jpastuszek@gmail.com"
   gem.authors = ["Jakub Pastuszek"]
   # dependencies defined in Gemfile
+
+	gem.files.select{|f| f =~ /^.idea/}.each do |file|
+		gem.files.exclude file
+	end
 end
 Jeweler::RubygemsDotOrgTasks.new
 

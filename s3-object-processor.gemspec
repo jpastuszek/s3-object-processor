@@ -9,8 +9,8 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Jakub Pastuszek"]
-  s.date = "2013-10-24"
-  s.description = "Migrates images form httpimagestore v0 S3 bucket to new ISS flexible API"
+  s.date = "2013-10-25"
+  s.description = "DSL tools for building programs that can process S3 object key-by-key using threaded worker pool"
   s.email = "jpastuszek@gmail.com"
   s.extra_rdoc_files = [
     "LICENSE.txt",
@@ -18,14 +18,6 @@ Gem::Specification.new do |s|
   ]
   s.files = [
     ".document",
-    ".idea/.rakeTasks",
-    ".idea/encodings.xml",
-    ".idea/jenkinsSettings.xml",
-    ".idea/misc.xml",
-    ".idea/modules.xml",
-    ".idea/s3-object-processor.iml",
-    ".idea/scopes/scope_settings.xml",
-    ".idea/vcs.xml",
     ".rspec",
     "Gemfile",
     "Gemfile.lock",
@@ -34,6 +26,8 @@ Gem::Specification.new do |s|
     "Rakefile",
     "VERSION",
     "lib/s3-object-processor.rb",
+    "lib/s3-object-processor/cli.rb",
+    "s3-object-processor.gemspec",
     "spec/s3-object-processor_spec.rb",
     "spec/spec_helper.rb"
   ]
@@ -41,7 +35,7 @@ Gem::Specification.new do |s|
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
   s.rubygems_version = "1.8.25"
-  s.summary = "Migrate images to new httpimagestore flexible API"
+  s.summary = "S3 key-by-kye processor builder"
 
   if s.respond_to? :specification_version then
     s.specification_version = 3

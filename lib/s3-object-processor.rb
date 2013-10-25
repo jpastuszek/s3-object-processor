@@ -217,7 +217,8 @@ class BucketProcessor
 						last_time = Time.now.to_f
 						last_total = total_processed_keys
 
-						log_line = "-- processed %6d: failed: %6d (%6.2f %%) handled: %6d skipped: %6d (%6.2f %%)" % [
+						log_line = "-[%s]- processed %6d: failed: %6d (%6.2f %%) handled: %6d skipped: %6d (%6.2f %%)" % [
+							value.to_s[0...2].ljust(2),
 							total_processed_keys,
 							total_failed_keys,
 							total_failed_keys.to_f / total_processed_keys * 100,
