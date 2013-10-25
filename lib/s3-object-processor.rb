@@ -12,10 +12,12 @@ class Runnable
 			begin
 				yield
 			rescue Interrupt
+				# ignored
 			ensure
 				begin
 					@on_finish.each{|on_finish| on_finish.call} if @on_finish
 				rescue
+					# ignored
 				end
 			end
 		end
@@ -56,6 +58,31 @@ class Lister < Runnable
 					end
 					marker = keys_chunk.last.name
 				end
+			end
+		end
+	end
+end
+
+class ListLister < Runnable
+	def initialize(bucket, key_queue, max_keys = nil)
+		@bucket = bucket
+		@key_queue = key_queue
+		@max_keys = max_keys
+	end
+
+	def on_keys_chunk(&callback)
+		@on_keys_chunk = callback
+		self
+	end
+
+	def run(list)
+		super() do
+			total_keys = 0
+			@on_keys_chunk.call(list) if @on_keys_chunk
+			list.each do |key|
+				@key_queue << @bucket.key(key)
+				break if @max_keys and total_keys >= @max_keys
+				total_keys += 1
 			end
 		end
 	end
@@ -186,6 +213,7 @@ class BucketProcessor
 		reporter_summary_interval = options[:reporter_summary_interval] || 100
 		reporter_average_contribution = options[:reporter_average_contribution] || 0.10
 		custom_reports = options[:reports] || []
+		@key_list = options[:key_list]
 
 		s3 = RightAws::S3.new(key_id, key_secret, multi_thread: true, logger: @log, protocol: protocol, port: port)
 		bucket = s3.bucket(bucket)
@@ -271,7 +299,12 @@ class BucketProcessor
 		end
 
 		# create lister
-		@lister = Lister.new(bucket, @key_queue, lister_fetch_size, max_keys)
+		@lister = if @key_list
+			@log.info "processing #{@key_list.length} keys from list file"
+			@lister = ListLister.new(bucket, @key_queue, max_keys)
+		else
+			@lister = Lister.new(bucket, @key_queue, lister_fetch_size, max_keys)
+		end
 		.on_keys_chunk do |keys_chunk|
 			@log.debug "Got #{keys_chunk.length} new keys"
 			@reporter.report(:new_keys_count, keys_chunk.length)
@@ -304,7 +337,11 @@ class BucketProcessor
 	def run(prefix = nil)
 		begin
 			@reporter.run
-			@lister.run(prefix)
+			if @key_list
+				@lister.run(@key_list)
+			else
+				@lister.run(prefix)
+			end
 			@workers.each(&:run)
 
 			# wait for all to finish

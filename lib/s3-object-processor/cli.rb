@@ -47,6 +47,10 @@ module S3ObjectProcessor
 					description: 'maximum length of to be processed key queue',
 					cast: Integer,
 					default: 1000
+				option :key_list,
+					description: 'file with keys to process (one per line)',
+					default_label: 'process all keys in S3 bucket',
+					cast: Pathname
 
 				option :reporter_backlog,
 					description: 'maximum length of to be processed report queue',
@@ -103,6 +107,7 @@ module S3ObjectProcessor
 				max_keys: settings.max_keys,
 				lister_fetch_size: settings.lister_fetch_size,
 				lister_backlog: settings.lister_backlog,
+				key_list: settings.key_list && settings.key_list.readlines.map(&:strip),
 				reporter_backlog: settings.reporter_backlog,
 				reporter_summary_interval: settings.reporter_summary_interval,
 				reporter_average_contribution: settings.reporter_average_contribution,
