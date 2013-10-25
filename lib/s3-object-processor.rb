@@ -13,7 +13,10 @@ class Runnable
 				yield
 			rescue Interrupt
 			ensure
-				@on_finish.each{|on_finish| on_finish.call} if @on_finish
+				begin
+					@on_finish.each{|on_finish| on_finish.call} if @on_finish
+				rescue
+				end
 			end
 		end
 		self
