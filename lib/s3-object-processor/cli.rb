@@ -89,6 +89,13 @@ module S3ObjectProcessor
 
 			log.debug(settings.inspect)
 
+			trap 'QUIT' do
+				Thread.list.each do |thread|
+					STDERR.puts "Thread-#{thread.object_id.to_s(36)}"
+					STDERR.puts thread.backtrace.join("\n    \\_ ")
+				end
+			end
+
 			BucketProcessor.new(settings.key_id, settings.key_secret, settings.bucket,
 				no_https: settings.no_https,
 				log: log,

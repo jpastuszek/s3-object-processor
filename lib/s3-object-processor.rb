@@ -137,7 +137,7 @@ class Reporter < Runnable
 
 		on_finish do
 			# flush thread waiting on queue
-			@report_queue.max = 9999
+			@report_queue.max = 999999
 		end
 	end
 
@@ -310,9 +310,11 @@ class BucketProcessor
 
 			@lister.join
 			@reporter.join
-		rescue Interrupt
+		rescue Interrupt => error
+			@log.warn 'Interrupted'
 			# flush thread waiting on queues
 			@key_queue.max = 999999
+			@reporter.join
 		end
 	end
 end
